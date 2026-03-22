@@ -5,47 +5,25 @@
     <title>Super Iván y Pedro - TV Edition</title>
     <style>
         body { margin: 0; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; font-family: 'Arial Black', sans-serif; }
-        
-        /* Contenedor para manejar el Fullscreen */
         #game-container { position: relative; width: 400px; height: 600px; }
-        
-        canvas { border: 4px solid #fff; background: #4ec0ca; box-shadow: 0 0 50px rgba(0,0,0,0.8); width: 100%; height: 100%; }
-        
-        #ui { position: absolute; text-align: center; color: white; pointer-events: none; width: 100%; height: 100%; top: 0; left: 0; }
-        
-        #pantallaInicio { 
-            position: absolute; 
-            width: 100%; 
-            height: 100%; 
-            background: #000; 
-            z-index: 100; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            cursor: pointer;
-            border: 4px solid #fff;
-        }
+        canvas { border: 4px solid #fff; background: #4ec0ca; width: 100%; height: 100%; }
+        #pantallaInicio { position: absolute; width: 100%; height: 100%; background: #000; z-index: 100; display: flex; justify-content: center; align-items: center; cursor: pointer; border: 4px solid #fff; }
         #pantallaInicio img { width: 100%; height: 100%; object-fit: contain; }
-
+        #loading-text { position: absolute; bottom: 20px; color: white; font-size: 14px; }
         #menu { position: absolute; background: rgba(0,0,0,0.95); width: 100%; height: 100%; display: none; flex-direction: column; justify-content: center; align-items: center; color: white; z-index: 10; border: 4px solid #fff; top:0; left:0; }
-        
-        #cartelUpss { position: absolute; width: 100%; height: 100%; display: none; flex-direction: column; justify-content: center; align-items: center; color: #ffeb3b; z-index: 20; text-align: center; pointer-events: none; top:0; left:0;}
-        .upss-texto { font-size: 50px; text-shadow: 5px 5px #f00; }
-        .btn { background: #444; color: white; border: 3px solid #fff; padding: 12px; margin: 8px; cursor: pointer; font-family: 'Arial Black', sans-serif; font-size: 16px; width: 220px; transition: 0.2s; pointer-events: auto; }
-        .btn:focus, .btn:hover { background: #fff; color: #000; transform: scale(1.1); outline: none; }
-        
-        #vidas-container { position: absolute; top: 15px; left: 15px; display: flex; gap: 5px; pointer-events: none; z-index: 5; }
+        .btn { background: #444; color: white; border: 3px solid #fff; padding: 12px; margin: 8px; cursor: pointer; font-size: 16px; width: 220px; }
+        .btn:focus { background: #fff; color: #000; outline: none; transform: scale(1.1); }
+        #ui { position: absolute; text-align: center; color: white; pointer-events: none; width: 100%; height: 100%; top: 0; left: 0; }
+        #vidas-container { position: absolute; top: 15px; left: 15px; display: flex; gap: 5px; }
         .corazon { font-size: 28px; text-shadow: 3px 3px #000; }
-        
-        #jugador { font-size: 30px; text-shadow: 3px 3px #000; margin-top: 20px; opacity: 0; transition: 0.5s; }
-        #puntos { font-size: 30px; text-shadow: 2px 2px #000; margin: 0; }
     </style>
 </head>
 <body>
 
     <div id="game-container">
         <div id="pantallaInicio" onclick="quitarInicio()">
-            <img src="inicio.jpg" alt="Super Iván y Pedro Space Race">
+            <img src="inicio.jpg" id="img-portada">
+            <div id="loading-text">CARGANDO RECURSOS...</div>
         </div>
 
         <div id="menu">
@@ -56,14 +34,8 @@
             <button class="btn" onclick="iniciar(4)" style="color:#ff5252">GOD</button>
         </div>
 
-        <div id="cartelUpss">
-            <div class="upss-texto">¡Upss!</div>
-            <div style="font-size: 20px; color: white;">intentá de vuelta...</div>
-        </div>
-
         <div id="ui">
-            <h1 id="jugador">¡A VOLAR!</h1>
-            <h2 id="puntos">Puntos: 0</h2>
+            <h2 id="puntos" style="margin-top:20px; text-shadow: 2px 2px #000;">Puntos: 0</h2>
             <div id="vidas-container">
                 <span id="v1" class="corazon">❤️</span>
                 <span id="v2" class="corazon">❤️</span>
@@ -79,73 +51,71 @@
     const container = document.getElementById('game-container');
     const menu = document.getElementById('menu');
     const pantallaInicio = document.getElementById('pantallaInicio');
-    const cartelUpss = document.getElementById('cartelUpss');
-    const jugadorTxt = document.getElementById('jugador');
-    const puntosTxt = document.getElementById('puntos');
-    const tituloMenu = document.getElementById('tituloMenu');
+    const loadingText = document.getElementById('loading-text');
 
     canvas.width = 400; canvas.height = 600;
 
-    // --- RECURSOS ---
+    // --- CARGADOR DE IMÁGENES (CRÍTICO PARA TV) ---
+    const imagenes = {};
+    const nombresImg = ['ivan.png', 'pedro.png', 'fondo.jpg', 'textura.png', 'nave.png'];
+    let cargadas = 0;
+
+    function cargarTodo(callback) {
+        nombresImg.forEach(nombre => {
+            const img = new Image();
+            img.src = nombre;
+            img.onload = () => {
+                cargadas++;
+                if(cargadas === nombresImg.length) {
+                    loadingText.innerText = "¡LISTO! TOCA PARA EMPEZAR";
+                    callback();
+                }
+            };
+            img.onerror = () => {
+                loadingText.innerText = "ERROR CARGANDO: " + nombre;
+                loadingText.style.color = "red";
+            };
+            imagenes[nombre.split('.')[0]] = img;
+        });
+    }
+
+    // --- AUDIOS ---
     const musicaInicio = new Audio('musica inicio.mp3'); musicaInicio.loop = true;
     const musicaFondo = new Audio('musica.mp3'); musicaFondo.loop = true;
-    const sonidoMuerte = new Audio('muerte.mp3'); 
-    const imgIvan = new Image(); imgIvan.src = 'ivan.png';
-    const imgPedro = new Image(); imgPedro.src = 'pedro.png';
-    const imgFondo = new Image(); imgFondo.src = 'fondo.jpg';
-    const imgTextura = new Image(); imgTextura.src = 'textura.png';
-    const imgNave = new Image(); imgNave.src = 'nave.png'; 
+    
+    let activo = false, inicioFase = 0, listoParaJugar = false;
+    let neneX = 50, neneY = 300, neneSize = 70, velY = 0, score = 0, frame = 0;
+    let vidas = 3, invulnerable = 0, neneActual = "Iván", dificultad = 1;
+    let tuberias = [], navesEnemigas = [], lasers = [], fragmentos = [];
 
-    let neneX = 50, neneY = 300, neneSize = 70;
-    let velY = 0, gravedad = 0.35, salto = -7.2;
-    let score = 0, activo = false, frame = 0, inicioFase = 0;
-    let vidas = 3, invulnerable = 0;
-    let tuberias = [], navesEnemigas = [], lasers = [], fragmentos = [], textosBoom = [];
-    let neneActual = "Iván", dificultad = 1;
+    cargarTodo(() => { listoParaJugar = true; });
 
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-    function fadeAudio(audio, targetVolume, duration, callback) {
-        const startVolume = audio.volume;
-        const diff = targetVolume - startVolume;
-        const steps = 20;
+    function fadeAudio(audio, targetVolume, duration) {
+        const startVol = audio.volume;
+        const steps = 10;
         const stepTime = duration / steps;
-        let currentStep = 0;
+        let i = 0;
         const interval = setInterval(() => {
-            currentStep++;
-            audio.volume = Math.max(0, Math.min(1, startVolume + (diff * (currentStep / steps))));
-            if (currentStep >= steps) {
+            i++;
+            audio.volume = Math.max(0, Math.min(1, startVol + (targetVolume - startVol) * (i / steps)));
+            if (i >= steps) {
                 clearInterval(interval);
                 if (targetVolume === 0) audio.pause();
-                if (callback) callback();
             }
         }, stepTime);
     }
 
-    // --- FUNCIÓN PANTALLA COMPLETA ---
-    function activarFullscreen() {
-        if (container.requestFullscreen) {
-            container.requestFullscreen();
-        } else if (container.webkitRequestFullscreen) {
-            container.webkitRequestFullscreen();
-        } else if (container.mozRequestFullScreen) {
-            container.mozRequestFullScreen();
-        }
-    }
-
     function quitarInicio() {
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-        activarFullscreen(); // Intentar poner pantalla completa al primer toque
-
+        if (!listoParaJugar) return;
         if (inicioFase === 0) {
             musicaInicio.volume = 0;
-            musicaInicio.play();
+            musicaInicio.play().catch(() => {});
             fadeAudio(musicaInicio, 1, 1000);
             inicioFase = 1;
         } else if (inicioFase === 1) {
             pantallaInicio.style.display = 'none';
             menu.style.display = 'flex';
-            document.getElementById('btnDefault').focus(); // Importante para el control remoto
+            document.getElementById('btnDefault').focus();
             inicioFase = 2;
         }
     }
@@ -154,166 +124,65 @@
         fadeAudio(musicaInicio, 0, 800);
         setTimeout(() => {
             musicaFondo.volume = 0;
-            musicaFondo.play();
+            musicaFondo.play().catch(() => {});
             fadeAudio(musicaFondo, 1, 800);
         }, 200);
 
         dificultad = nivel;
         menu.style.display = 'none';
-        cartelUpss.style.display = 'none';
-        vidas = 3; invulnerable = 0;
-        score = 0; frame = 0; neneY = 300; velY = 0;
-        tuberias = []; navesEnemigas = []; lasers = []; fragmentos = []; textosBoom = [];
-        puntosTxt.innerText = "Puntos: 0";
-        jugadorTxt.innerText = "JUEGA: " + neneActual.toUpperCase();
-        jugadorTxt.style.opacity = '1';
+        vidas = 3; score = 0; frame = 0; neneY = 300; velY = 0;
+        tuberias = []; navesEnemigas = []; lasers = []; fragmentos = [];
         activo = true;
-        actualizarVidasUI();
-        setTimeout(() => { if(activo) jugadorTxt.style.opacity = '0'; }, 2000);
     }
 
-    function beep(f, t, type="sine", vol=0.05) {
-        if(audioCtx.state === 'suspended') return;
-        const o = audioCtx.createOscillator();
-        const g = audioCtx.createGain();
-        o.type = type; o.connect(g); g.connect(audioCtx.destination);
-        o.frequency.value = f; g.gain.value = vol;
-        o.start(); g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + t);
-        o.stop(audioCtx.currentTime + t);
-    }
-
-    function actualizarVidasUI() {
-        for(let i=1; i<=3; i++) {
-            document.getElementById('v' + i).innerText = (i <= vidas) ? "❤️" : "🖤";
-        }
-    }
-
-    function saltar() { if (activo) { velY = salto; beep(450, 0.1); } }
-    function disparar() {
-        if (!activo) return;
-        let baseGrosor = (5 - dificultad) * 3; 
-        lasers.push({ x: neneX + neneSize, y: neneY + neneSize/2, w: 25, h: Math.min(30, baseGrosor + Math.floor(score / 5) * 2) });
-        beep(1200, 0.1, "square", 0.03); 
-    }
-
-    // --- CONTROLES ADAPTADOS PARA SMART TV ---
-    window.onkeydown = (e) => { 
-        // Si estamos en la pantalla de inicio, cualquier tecla avanza
+    window.onkeydown = (e) => {
         if (inicioFase < 2) { quitarInicio(); return; }
-
-        // Mapeo de teclas (Teclado y Control Remoto)
-        // 13: Enter/OK, 38: Arriba, 40: Abajo
-        if(e.code === 'Space' || e.keyCode === 38 || e.key === 'ArrowUp') {
-            if(activo) saltar();
-        }
-        if(e.code === 'KeyW' || e.keyCode === 13 || e.key === 'Enter') {
-            if(activo) disparar();
+        if (e.key === 'ArrowUp' || e.keyCode === 38 || e.code === 'Space') { if(activo) velY = -7.2; }
+        if (e.key === 'Enter' || e.keyCode === 13) {
+            if(activo) lasers.push({ x: neneX + neneSize, y: neneY + neneSize/2, w: 25, h: 10 });
         }
     };
-
-    window.onmousedown = (e) => { 
-        if (inicioFase < 2) return; 
-        if (e.button === 0) saltar(); 
-        if (e.button === 2) disparar(); 
-    };
-    window.oncontextmenu = (e) => e.preventDefault();
-
-    function chocar() {
-        if (invulnerable > 0) return;
-        vidas--; actualizarVidasUI();
-        beep(150, 0.5, "sawtooth", 0.1);
-        if (vidas <= 0) morirDefinitivo(); else { invulnerable = 120; velY = salto; }
-    }
-
-    function morirDefinitivo() {
-        activo = false;
-        fadeAudio(musicaFondo, 0, 500);
-        cartelUpss.style.display = 'flex';
-        sonidoMuerte.play().catch(() => {});
-        sonidoMuerte.onended = () => {
-            cartelUpss.style.display = 'none';
-            neneActual = (neneActual === "Iván") ? "Pedro" : "Iván";
-            tituloMenu.innerHTML = "TURNO DE: <br><span style='color:#4ec0ca'>" + neneActual.toUpperCase() + "</span>";
-            menu.style.display = 'flex';
-            document.getElementById('btnDefault').focus();
-            musicaInicio.volume = 0; musicaInicio.play();
-            fadeAudio(musicaInicio, 1, 800);
-        };
-    }
 
     function loop() {
-        if (imgTextura.complete && !patronTextura) patronTextura = ctx.createPattern(imgTextura, 'repeat');
+        // Fondo
         ctx.fillStyle = "#4ec0ca";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        if (imgFondo.complete) ctx.drawImage(imgFondo, 0, 0, canvas.width, canvas.height);
+        if (imagenes.fondo) ctx.drawImage(imagenes.fondo, 0, 0, canvas.width, canvas.height);
 
         if (activo) {
-            velY += gravedad; neneY += velY;
-            if (invulnerable > 0) invulnerable--;
-            let velJuego = 1.8 + (dificultad * 0.6); 
-            
-            if (frame % Math.floor(160 - (dificultad * 15)) === 0) {
-                let yRnd = Math.random() * (canvas.height - (300 - (dificultad * 35)) - 100) + 50;
-                tuberias.push({ x: canvas.width, y: yRnd, h: 300 - (dificultad * 35), p: false });
+            velY += 0.35; neneY += velY;
+            let velJuego = 2 + (dificultad * 0.5);
+
+            // Tuberías
+            if (frame % 150 === 0) {
+                tuberias.push({ x: canvas.width, y: Math.random() * 200 + 100, h: 250, p: false });
             }
-
-            if (score >= 5 && frame % 110 === 0 && Math.random() > (0.6 - dificultad*0.1)) {
-                navesEnemigas.push({ x: canvas.width, y: Math.random()*500 + 50, w: 75, h: 45, velX: velJuego + dificultad });
-            }
-
-            lasers.forEach((l, li) => {
-                l.x += 12; ctx.fillStyle = "#ff0000"; ctx.fillRect(l.x, l.y - l.h/2, l.w, l.h);
-                navesEnemigas.forEach((n, ni) => {
-                    if (l.x < n.x + n.w && l.x + l.w > n.x && l.y > n.y && l.y < n.y + n.h) {
-                        for(let i=0; i<20; i++) fragmentos.push({ x: n.x + n.w/2, y: n.y + n.h/2, vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, size: Math.random()*5+2, vida: 1, color: 'orange' });
-                        textosBoom.push({ x: n.x + n.w/2, y: n.y + n.h/2, vida: 1 });
-                        navesEnemigas.splice(ni, 1); lasers.splice(li, 1);
-                        score += 2; puntosTxt.innerText = "Puntos: " + score;
-                    }
-                });
-            });
-
-            tuberias.forEach((t, ti) => {
+            tuberias.forEach((t, i) => {
                 t.x -= velJuego;
-                if (patronTextura) {
-                    let matriz = new DOMMatrix().translate(t.x, 0); patronTextura.setTransform(matriz);
-                    ctx.fillStyle = patronTextura;
-                } else { ctx.fillStyle = "#73bf2e"; }
-                ctx.fillRect(t.x, 0, 65, t.y); ctx.fillRect(t.x, t.y + t.h, 65, canvas.height);
-                if (neneX+neneSize-20 > t.x && neneX+20 < t.x+65 && (neneY+20 < t.y || neneY+neneSize-20 > t.y+t.h)) chocar();
-                if (!t.p && t.x < neneX) { t.p = true; score++; puntosTxt.innerText = "Puntos: " + score; }
-                if (t.x < -70) tuberias.splice(ti, 1);
+                ctx.fillStyle = "green";
+                ctx.fillRect(t.x, 0, 60, t.y);
+                ctx.fillRect(t.x, t.y + t.h, 60, canvas.height);
+                if (neneX + 50 > t.x && neneX + 10 < t.x + 60 && (neneY + 10 < t.y || neneY + 50 > t.y + t.h)) activo = false;
+                if (!t.p && t.x < neneX) { t.p = true; score++; document.getElementById('puntos').innerText = "Puntos: " + score; }
             });
 
-            navesEnemigas.forEach((n, ni) => {
-                n.x -= n.velX; if (imgNave.complete) ctx.drawImage(imgNave, n.x, n.y, n.w, n.h);
-                if (neneX+neneSize-25 > n.x && neneX+25 < n.x+n.w && neneY+25 < n.y+n.h && neneY+neneSize-25 > n.y) chocar();
-                if (n.x < -120) navesEnemigas.splice(ni, 1);
-            });
-
-            fragmentos.forEach((f, fi) => {
-                f.x += f.vx; f.y += f.vy; f.vida -= 0.03;
-                if (f.vida <= 0) fragmentos.splice(fi, 1);
-                else { ctx.fillStyle = f.color; ctx.globalAlpha = f.vida; ctx.fillRect(f.x, f.y, f.size, f.size); ctx.globalAlpha = 1; }
-            });
-
-            textosBoom.forEach((t, ti) => {
-                t.y -= 1; t.vida -= 0.02;
-                if (t.vida <= 0) textosBoom.splice(ti, 1);
-                else { ctx.fillStyle = `rgba(255, 165, 0, ${t.vida})`; ctx.font = 'bold 30px Arial Black'; ctx.textAlign = 'center'; ctx.fillText('¡BOOM!', t.x, t.y); }
-            });
-
-            if (neneY > canvas.height || neneY < 0) chocar();
+            if (neneY > canvas.height || neneY < 0) activo = false;
             frame++;
         }
 
-        if (inicioFase === 2 && invulnerable % 10 < 5) {
-            let img = (neneActual === "Iván") ? imgIvan : imgPedro;
-            ctx.save(); ctx.translate(neneX + neneSize/2, neneY + neneSize/2);
-            ctx.rotate(activo ? Math.min(Math.PI/4, Math.max(-Math.PI/4, velY * 0.05)) : 0);
-            if (img.complete) ctx.drawImage(img, -neneSize/2, -neneSize/2, neneSize, neneSize);
-            ctx.restore();
+        // Personaje
+        if (inicioFase === 2) {
+            let img = (neneActual === "Iván") ? imagenes.ivan : imagenes.pedro;
+            if (img) ctx.drawImage(img, neneX, neneY, neneSize, neneSize);
         }
+
+        if(!activo && inicioFase === 2) {
+            // Si muere, resetamos música y volvemos al menú
+            musicaFondo.pause();
+            menu.style.display = 'flex';
+            document.getElementById('btnDefault').focus();
+        }
+
         requestAnimationFrame(loop);
     }
     loop();
