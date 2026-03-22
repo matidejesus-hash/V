@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Super Iván y Pedro - TV Edition FULL + DRAMA</title>
+    <title>Super Iván y Pedro - TV Edition FULL</title>
     <style>
         body { margin: 0; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; font-family: 'Arial Black', sans-serif; }
         #game-container { position: relative; width: 400px; height: 600px; background: #4ec0ca; overflow: hidden;}
@@ -14,7 +14,6 @@
 
         #menu { position: absolute; background: rgba(0,0,0,0.9); width: 100%; height: 100%; display: none; flex-direction: column; justify-content: center; align-items: center; color: white; z-index: 10; border: 4px solid #fff; top:0; left:0; }
         
-        /* CARTEL DE MUERTE */
         #cartelUpss { position: absolute; width: 100%; height: 100%; display: none; flex-direction: column; justify-content: center; align-items: center; color: #ffeb3b; z-index: 50; text-align: center; pointer-events: none; top:0; left:0; }
         .upss-texto { font-size: 60px; text-shadow: 5px 5px #f00; }
 
@@ -69,11 +68,9 @@
 
     canvas.width = 400; canvas.height = 600;
 
-    // --- RECURSOS ---
     const imagenes = {};
     const nombresImg = ['ivan.png', 'pedro.png', 'fondo.jpg', 'nave.png'];
-    let cargadas = 0;
-    let listoParaJugar = false;
+    let cargadas = 0, listoParaJugar = false;
 
     nombresImg.forEach(nombre => {
         const img = new Image();
@@ -149,23 +146,15 @@
         activo = true;
     }
 
-    function chocar() {
-        if (invulnerable > 0) return;
-        vidas--;
-        actualizarVidasUI();
-        if (vidas <= 0) {
-            morirDefinitivo();
-        } else {
-            invulnerable = 100;
-            velY = -5;
-        }
+    function saltar() { if(activo) velY = -7.2; }
+    function disparar() {
+        if(!activo) return;
+        lasers.push({ x: neneX + neneSize, y: neneY + neneSize/2, w: 20, h: 8 });
     }
 
     function morirDefinitivo() {
         activo = false;
         fadeAudio(musicaFondo, 0, 500);
-        
-        // Mostrar cartel Upss y sonar música de muerte
         cartelUpss.style.display = 'flex';
         sonidoMuerte.play().catch(() => {});
 
@@ -175,18 +164,23 @@
             document.getElementById('tituloMenu').innerHTML = "TURNO DE:<br>" + neneActual.toUpperCase();
             menu.style.display = 'flex';
             document.getElementById('btnDefault').focus();
-            
-            musicaInicio.currentTime = 0;
-            musicaInicio.play().catch(()=>{}); 
-            fadeAudio(musicaInicio, 1, 800);
+            musicaInicio.play().catch(()=>{}); fadeAudio(musicaInicio, 1, 800);
         };
+    }
+
+    function chocar() {
+        if (invulnerable > 0) return;
+        vidas--;
+        actualizarVidasUI();
+        if (vidas <= 0) morirDefinitivo();
+        else { invulnerable = 100; velY = -5; }
     }
 
     window.onkeydown = (e) => {
         if (inicioFase < 2) { quitarInicio(); return; }
-        if (e.key === 'ArrowUp' || e.keyCode === 38 || e.code === 'Space') { if(activo) velY = -7.2; }
+        if (e.key === 'ArrowUp' || e.keyCode === 38 || e.code === 'Space') saltar();
         if (e.key === 'Enter' || e.keyCode === 13) {
-            if (activo) lasers.push({ x: neneX + neneSize, y: neneY + neneSize/2, w: 20, h: 8 });
+            if (activo) disparar();
         }
     };
 
