@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Super Iván y Pedro - Space Race</title>
+    <style>
+        body { margin: 0; background: #111; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; font-family: 'Arial Black', sans-serif; }
+        canvas { border: 4px solid #fff; background: #4ec0ca; box-shadow: 0 0 50px rgba(0,0,0,0.8); }
+        
+        #ui { position: absolute; text-align: center; color: white; pointer-events: none; width: 400px; height: 600px; }
+        
+        #pantallaInicio { 
+            position: absolute; 
+            width: 400px; 
+            height: 600px; 
+            background: #000; 
+            z-index: 100; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            cursor: pointer;
+            border: 4px solid #fff;
+        }
+        #pantallaInicio img { width: 100%; height: 100%; object-fit: contain; }
+
+        #menu { position: absolute; background: rgba(0,0,0,0.95); width: 400px; height: 600px; display: none; flex-direction: column; justify-content: center; align-items: center; color: white; z-index: 10; border: 4px solid #fff; }
+        
+        #cartelUpss { position: absolute; width: 400px; height: 600px; display: none; flex-direction: column; justify-content: center; align-items: center; color: #ffeb3b; z-index: 20; text-align: center; pointer-events: none; }
+        .upss-texto { font-size: 50px; text-shadow: 5px 5px #f00; }
+        .btn { background: #444; color: white; border: 3px solid #fff; padding: 12px; margin: 8px; cursor: pointer; font-family: 'Arial Black', sans-serif; font-size: 16px; width: 220px; transition: 0.2s; pointer-events: auto; }
+        .btn:hover { background: #fff; color: #000; transform: scale(1.05); }
+        
+        #vidas-container { position: absolute; top: 15px; left: 15px; display: flex; gap: 5px; pointer-events: none; z-index: 5; }
+        .corazon { font-size: 28px; text-shadow: 3px 3px #000; }
+        
+        #jugador { font-size: 30px; text-shadow: 3px 3px #000; margin-top: 20px; opacity: 0; transition: 0.5s; }
+        #puntos { font-size: 30px; text-shadow: 2px 2px #000; margin: 0; }
+    </style>
+</head>
+<body>
+
+    <div id="pantallaInicio" onclick="quitarInicio()">
+        <img src="inicio.jpg" alt="Super Iván y Pedro Space Race">
+    </div>
+
+    <div id="menu">
+        <h1 id="tituloMenu">¡A VOLAR!</h1>
+        <button class="btn" onclick="iniciar(1)" style="color:#4caf50">NOOB</button>
+        <button class="btn" onclick="iniciar(2)" style="color:#2196f3">PRO</button>
+        <button class="btn" onclick="iniciar(3)" style="color:#9c27b0">HACKER</button>
+        <button class="btn" onclick="iniciar(4)" style="color:#ff5252">GOD</button>
+    </div>
+
+    <div id="cartelUpss">
+        <div class="upss-texto">¡Upss!</div>
+        <div style="font-size: 20px; color: white;">intentá de vuelta...</div>
+    </div>
+
+    <div id="ui">
+        <h1 id="jugador">¡A VOLAR!</h1>
+        <h2 id="puntos">Puntos: 0</h2>
+        <div id="vidas-container">
+            <span id="v1" class="corazon">❤️</span>
+            <span id="v2" class="corazon">❤️</span>
+            <span id="v3" class="corazon">❤️</span>
+        </div>
+    </div>
+    <canvas id="juego"></canvas>
+
+<script>
+    const canvas = document.getElementById('juego');
+    const ctx = canvas.getContext('2d');
+    const menu = document.getElementById('menu');
+    const pantallaInicio = document.getElementById('pantallaInicio');
+    const cartelUpss = document.getElementById('cartelUpss');
+    const jugadorTxt = document.getElementById('jugador');
+    const puntosTxt = document.getElementById('puntos');
+    const tituloMenu = document.getElementById('tituloMenu');
+
+    canvas.width = 400; canvas.height = 600;
+
+    // --- AUDIOS ---
+    const musicaInicio = new Audio('musica inicio.mp3'); 
+    musicaInicio.loop = true;
+    const musicaFondo = new Audio('musica.mp3'); 
+    musicaFondo.loop = true;
+    const sonidoMuerte = new Audio('muerte.mp3'); 
+
+    // --- IMÁGENES ---
+    const imgIvan = new Image(); imgIvan.src = 'ivan.png';
+    const imgPedro = new Image(); imgPedro.src = 'pedro.png';
+    const imgFondo = new Image(); imgFondo.src = 'fondo.jpg';
+    const imgTextura = new Image(); imgTextura.src = 'textura.png';
+    const imgNave = new Image(); imgNave.src = 'nave.png'; 
+
+    let neneX = 50, neneY = 300, neneSize = 70;
+    let velY = 0, gravedad = 0.35, salto = -7.2;
+    let score = 0, activo = false, frame = 0, inicioQuitado = false;
+    let vidas = 3, invulnerable = 0;
+    let tuberias = [], navesEnemigas = [], lasers = [], fragmentos = [], textosBoom = [];
+    let neneActual = "Iván";
+    let patronTextura = null, dificultad = 1;
+
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    // --- FUNCIONES DE FADE (SUAVIZADO) ---
+    function fadeAudio(audio, targetVolume, duration, callback) {
+        const startVolume = audio.volume;
+        const diff = targetVolume - startVolume;
+        const steps = 20;
+        const stepTime = duration / steps;
+        let currentStep = 0;
+
+        const interval = setInterval(() => {
+            currentStep++;
+            audio.volume = Math.max(0, Math.min(1, startVolume + (diff * (currentStep / steps))));
+            if (currentStep >= steps) {
+                clearInterval(interval);
+                if (targetVolume === 0) {
+                    audio.pause();
+                }
+                if (callback) callback();
+            }
+        }, stepTime);
+    }
+
+    function quitarInicio() {
+        if (!inicioQuitado) {
+            inicioQuitado = true;
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
+            // Empezar música de inicio con Fade In
+            musicaInicio.volume = 0;
+            musicaInicio.play();
+            fadeAudio(musicaInicio, 1, 1000);
+
+            pantallaInicio.style.display = 'none';
+            menu.style.display = 'flex';
+        }
+    }
+
+    function iniciar(nivel) {
+        // Al iniciar el nivel, hacemos el cross-fade entre músicas
+        fadeAudio(musicaInicio, 0, 800, () => {
+            musicaInicio.currentTime = 0;
+        });
+
+        // Esperar un poco y empezar la música de fondo con fade in
+        setTimeout(() => {
+            musicaFondo.volume = 0;
+            musicaFondo.play();
+            fadeAudio(musicaFondo, 1, 800);
+        }, 200);
+
+        dificultad = nivel;
+        menu.style.display = 'none';
+        cartelUpss.style.display = 'none';
+        vidas = 3; invulnerable = 0;
+        actualizarVidasUI();
+        score = 0; frame = 0; neneY = 300; velY = 0;
+        tuberias = []; navesEnemigas = []; lasers = []; fragmentos = []; textosBoom = [];
+        puntosTxt.innerText = "Puntos: 0";
+        jugadorTxt.innerText = "JUEGA: " + neneActual.toUpperCase();
+        jugadorTxt.style.opacity = '1';
+        activo = true;
+        
+        setTimeout(() => { if(activo) jugadorTxt.style.opacity = '0'; }, 2000);
+    }
+
+    function beep(f, t, type="sine", vol=0.05) {
+        if(audioCtx.state === 'suspended') return;
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = type; o.connect(g); g.connect(audioCtx.destination);
+        o.frequency.value = f; g.gain.value = vol;
+        o.start(); g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + t);
+        o.stop(audioCtx.currentTime + t);
+    }
+
+    function actualizarVidasUI() {
+        for(let i=1; i<=3; i++) {
+            document.getElementById('v' + i).innerText = (i <= vidas) ? "❤️" : "🖤";
+        }
+    }
+
+    function saltar() { if (activo) { velY = salto; beep(450, 0.1); } }
+    function disparar() {
+        if (!activo) return;
+        let baseGrosor = (5 - dificultad) * 3; 
+        let grosor = Math.min(30, baseGrosor + Math.floor(score / 5) * 2);
+        lasers.push({ x: neneX + neneSize, y: neneY + neneSize/2, w: 25, h: grosor });
+        beep(1200, 0.1, "square", 0.03); 
+    }
+
+    window.onkeydown = (e) => { 
+        if (!inicioQuitado) { quitarInicio(); return; }
+        if(e.code === 'Space') saltar(); 
+        if(e.code === 'KeyW') disparar(); 
+    };
+
+    window.onmousedown = (e) => { 
+        if (!inicioQuitado) { quitarInicio(); return; }
+        if (e.button === 0) saltar(); 
+        if (e.button === 2) disparar(); 
+    };
+    window.oncontextmenu = (e) => e.preventDefault();
+
+    function chocar() {
+        if (invulnerable > 0) return;
+        vidas--;
+        actualizarVidasUI();
+        beep(150, 0.5, "sawtooth", 0.1);
+        if (vidas <= 0) { morirDefinitivo(); } else { invulnerable = 120; velY = salto; }
+    }
+
+    function morirDefinitivo() {
+        activo = false;
+        // Fade out de la música de fondo al morir
+        fadeAudio(musicaFondo, 0, 500, () => {
+            musicaFondo.currentTime = 0;
+        });
+
+        cartelUpss.style.display = 'flex';
+        sonidoMuerte.play().catch(() => {});
+        sonidoMuerte.onended = () => {
+            cartelUpss.style.display = 'none';
+            neneActual = (neneActual === "Iván") ? "Pedro" : "Iván";
+            tituloMenu.innerHTML = "TURNO DE: <br><span style='color:#4ec0ca'>" + neneActual.toUpperCase() + "</span>";
+            menu.style.display = 'flex';
+            
+            // Volver a poner la música de menú con fade in
+            musicaInicio.volume = 0;
+            musicaInicio.play();
+            fadeAudio(musicaInicio, 1, 800);
+        };
+    }
+
+    function loop() {
+        if (imgTextura.complete && !patronTextura) patronTextura = ctx.createPattern(imgTextura, 'repeat');
+        ctx.fillStyle = "#4ec0ca";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        if (imgFondo.complete) ctx.drawImage(imgFondo, 0, 0, canvas.width, canvas.height);
+
+        if (activo) {
+            velY += gravedad; neneY += velY;
+            if (invulnerable > 0) invulnerable--;
+            let velJuego = 1.8 + (dificultad * 0.6); 
+            let huecoColumnas = 300 - (dificultad * 35);
+            let frecuenciaTubo = 160 - (dificultad * 15);
+            
+            if (frame % Math.floor(frecuenciaTubo) === 0) {
+                let yRnd = Math.random() * (canvas.height - huecoColumnas - 100) + 50;
+                tuberias.push({ x: canvas.width, y: yRnd, h: huecoColumnas, p: false });
+            }
+
+            if (score >= 5 && frame % 110 === 0 && Math.random() > (0.6 - dificultad*0.1)) {
+                navesEnemigas.push({ x: canvas.width, y: Math.random()*500 + 50, w: 75, h: 45, velX: velJuego + dificultad });
+            }
+
+            lasers.forEach((l, li) => {
+                l.x += 12; ctx.fillStyle = "#ff0000"; ctx.fillRect(l.x, l.y - l.h/2, l.w, l.h);
+                navesEnemigas.forEach((n, ni) => {
+                    if (l.x < n.x + n.w && l.x + l.w > n.x && l.y > n.y && l.y < n.y + n.h) {
+                        for(let i=0; i<20; i++) fragmentos.push({ x: n.x + n.w/2, y: n.y + n.h/2, vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, size: Math.random()*5+2, vida: 1, color: 'orange' });
+                        textosBoom.push({ x: n.x + n.w/2, y: n.y + n.h/2, vida: 1 }); beep(100, 0.3, "sawtooth", 0.08); 
+                        navesEnemigas.splice(ni, 1); lasers.splice(li, 1);
+                        score += 2; puntosTxt.innerText = "Puntos: " + score;
+                    }
+                });
+            });
+
+            tuberias.forEach((t, ti) => {
+                t.x -= velJuego;
+                if (patronTextura) {
+                    let matriz = new DOMMatrix().translate(t.x, 0); patronTextura.setTransform(matriz);
+                    ctx.fillStyle = patronTextura;
+                } else { ctx.fillStyle = "#73bf2e"; }
+                ctx.fillRect(t.x, 0, 65, t.y); ctx.fillRect(t.x, t.y + t.h, 65, canvas.height);
+                if (neneX+neneSize-20 > t.x && neneX+20 < t.x+65 && (neneY+20 < t.y || neneY+neneSize-20 > t.y+t.h)) chocar();
+                if (!t.p && t.x < neneX) { t.p = true; score++; puntosTxt.innerText = "Puntos: " + score; }
+                if (t.x < -70) tuberias.splice(ti, 1);
+            });
+
+            navesEnemigas.forEach((n, ni) => {
+                n.x -= n.velX; if (imgNave.complete) ctx.drawImage(imgNave, n.x, n.y, n.w, n.h);
+                if (neneX+neneSize-25 > n.x && neneX+25 < n.x+n.w && neneY+25 < n.y+n.h && neneY+neneSize-25 > n.y) chocar();
+                if (n.x < -120) navesEnemigas.splice(ni, 1);
+            });
+
+            fragmentos.forEach((f, fi) => {
+                f.x += f.vx; f.y += f.vy; f.vida -= 0.03;
+                if (f.vida <= 0) fragmentos.splice(fi, 1);
+                else { ctx.fillStyle = f.color; ctx.globalAlpha = f.vida; ctx.fillRect(f.x, f.y, f.size, f.size); ctx.globalAlpha = 1; }
+            });
+
+            textosBoom.forEach((t, ti) => {
+                t.y -= 1; t.vida -= 0.02;
+                if (t.vida <= 0) textosBoom.splice(ti, 1);
+                else { ctx.fillStyle = `rgba(255, 165, 0, ${t.vida})`; ctx.font = 'bold 30px Arial Black'; ctx.textAlign = 'center'; ctx.fillText('¡BOOM!', t.x, t.y); }
+            });
+
+            if (neneY > canvas.height || neneY < 0) chocar();
+            frame++;
+        }
+
+        if (inicioQuitado && invulnerable % 10 < 5) {
+            let img = (neneActual === "Iván") ? imgIvan : imgPedro;
+            ctx.save(); ctx.translate(neneX + neneSize/2, neneY + neneSize/2);
+            ctx.rotate(activo ? Math.min(Math.PI/4, Math.max(-Math.PI/4, velY * 0.05)) : 0);
+            if (img.complete) ctx.drawImage(img, -neneSize/2, -neneSize/2, neneSize, neneSize);
+            ctx.restore();
+        }
+        requestAnimationFrame(loop);
+    }
+    loop();
+</script>
+</body>
+</html>
