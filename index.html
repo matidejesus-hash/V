@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Super Iván y Pedro - TV Edition FULL</title>
+    <title>Super Iván y Pedro - TV Edition FULL + DRAMA</title>
     <style>
         body { margin: 0; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; font-family: 'Arial Black', sans-serif; }
         #game-container { position: relative; width: 400px; height: 600px; background: #4ec0ca; overflow: hidden;}
@@ -13,6 +13,11 @@
         #loading-text { position: absolute; bottom: 30px; color: white; font-size: 16px; text-shadow: 2px 2px #000; }
 
         #menu { position: absolute; background: rgba(0,0,0,0.9); width: 100%; height: 100%; display: none; flex-direction: column; justify-content: center; align-items: center; color: white; z-index: 10; border: 4px solid #fff; top:0; left:0; }
+        
+        /* CARTEL DE MUERTE */
+        #cartelUpss { position: absolute; width: 100%; height: 100%; display: none; flex-direction: column; justify-content: center; align-items: center; color: #ffeb3b; z-index: 50; text-align: center; pointer-events: none; top:0; left:0; }
+        .upss-texto { font-size: 60px; text-shadow: 5px 5px #f00; }
+
         .btn { background: #444; color: white; border: 3px solid #fff; padding: 12px; margin: 8px; cursor: pointer; font-size: 18px; width: 220px; font-family: 'Arial Black'; }
         .btn:focus { background: #fff; color: #000; outline: none; transform: scale(1.1); }
 
@@ -38,6 +43,11 @@
             <button class="btn" onclick="iniciar(4)" style="color:#ff5252">GOD</button>
         </div>
 
+        <div id="cartelUpss">
+            <div class="upss-texto">¡Upss!</div>
+            <div style="font-size: 20px; color: white;">intentá de vuelta...</div>
+        </div>
+
         <div id="ui">
             <h2 id="puntos">Puntos: 0</h2>
             <div id="vidas-container">
@@ -54,11 +64,12 @@
     const ctx = canvas.getContext('2d');
     const menu = document.getElementById('menu');
     const pantallaInicio = document.getElementById('pantallaInicio');
+    const cartelUpss = document.getElementById('cartelUpss');
     const loadingText = document.getElementById('loading-text');
 
     canvas.width = 400; canvas.height = 600;
 
-    // --- RECURSOS (Imágenes) ---
+    // --- RECURSOS ---
     const imagenes = {};
     const nombresImg = ['ivan.png', 'pedro.png', 'fondo.jpg', 'nave.png'];
     let cargadas = 0;
@@ -78,11 +89,10 @@
         imagenes[nombre.split('.')[0]] = img;
     });
 
-    // --- AUDIOS ---
     const musicaInicio = new Audio('musica inicio.mp3'); musicaInicio.loop = true;
     const musicaFondo = new Audio('musica.mp3'); musicaFondo.loop = true;
+    const sonidoMuerte = new Audio('muerte.mp3'); 
 
-    // --- VARIABLES DE JUEGO ---
     let activo = false, inicioFase = 0;
     let neneX = 50, neneY = 300, neneSize = 70, velY = 0;
     let score = 0, frame = 0, vidas = 3, invulnerable = 0;
@@ -124,8 +134,10 @@
     function iniciar(nivel) {
         dificultad = nivel;
         menu.style.display = 'none';
+        cartelUpss.style.display = 'none';
         fadeAudio(musicaInicio, 0, 800);
         setTimeout(() => {
+            musicaFondo.currentTime = 0;
             musicaFondo.volume = 0; musicaFondo.play().catch(()=>{});
             fadeAudio(musicaFondo, 1, 800);
         }, 200);
@@ -137,40 +149,46 @@
         activo = true;
     }
 
-    function saltar() { if(activo) velY = -7.2; }
-    function disparar() {
-        if(!activo) return;
-        lasers.push({ x: neneX + neneSize, y: neneY + neneSize/2, w: 20, h: 8 });
-    }
-
-    window.onkeydown = (e) => {
-        if (inicioFase < 2) { quitarInicio(); return; }
-        if (e.key === 'ArrowUp' || e.keyCode === 38 || e.code === 'Space') saltar();
-        if (e.key === 'Enter' || e.keyCode === 13) {
-            if (activo) disparar();
-            else if (menu.style.display === 'none') { /* evita disparar en menu */ }
-        }
-    };
-
     function chocar() {
         if (invulnerable > 0) return;
         vidas--;
         actualizarVidasUI();
         if (vidas <= 0) {
-            activo = false;
-            fadeAudio(musicaFondo, 0, 500);
-            setTimeout(() => {
-                neneActual = (neneActual === "Iván") ? "Pedro" : "Iván";
-                document.getElementById('tituloMenu').innerHTML = "TURNO DE:<br>" + neneActual.toUpperCase();
-                menu.style.display = 'flex';
-                document.getElementById('btnDefault').focus();
-                musicaInicio.play(); fadeAudio(musicaInicio, 1, 800);
-            }, 1000);
+            morirDefinitivo();
         } else {
-            invulnerable = 100; // 100 frames de protección
+            invulnerable = 100;
             velY = -5;
         }
     }
+
+    function morirDefinitivo() {
+        activo = false;
+        fadeAudio(musicaFondo, 0, 500);
+        
+        // Mostrar cartel Upss y sonar música de muerte
+        cartelUpss.style.display = 'flex';
+        sonidoMuerte.play().catch(() => {});
+
+        sonidoMuerte.onended = () => {
+            cartelUpss.style.display = 'none';
+            neneActual = (neneActual === "Iván") ? "Pedro" : "Iván";
+            document.getElementById('tituloMenu').innerHTML = "TURNO DE:<br>" + neneActual.toUpperCase();
+            menu.style.display = 'flex';
+            document.getElementById('btnDefault').focus();
+            
+            musicaInicio.currentTime = 0;
+            musicaInicio.play().catch(()=>{}); 
+            fadeAudio(musicaInicio, 1, 800);
+        };
+    }
+
+    window.onkeydown = (e) => {
+        if (inicioFase < 2) { quitarInicio(); return; }
+        if (e.key === 'ArrowUp' || e.keyCode === 38 || e.code === 'Space') { if(activo) velY = -7.2; }
+        if (e.key === 'Enter' || e.keyCode === 13) {
+            if (activo) lasers.push({ x: neneX + neneSize, y: neneY + neneSize/2, w: 20, h: 8 });
+        }
+    };
 
     function loop() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -181,20 +199,17 @@
             if (invulnerable > 0) invulnerable--;
             let v = 2 + (dificultad * 0.6);
 
-            // Tuberías
             if (frame % 140 === 0) tuberias.push({ x: canvas.width, y: Math.random()*250+50, h: 280 - (dificultad*20), p: false });
             tuberias.forEach((t, i) => {
                 t.x -= v;
                 ctx.fillStyle = "#73bf2e";
                 ctx.fillRect(t.x, 0, 60, t.y);
                 ctx.fillRect(t.x, t.y + t.h, 60, canvas.height);
-                // Colisión
                 if (neneX+neneSize-15 > t.x && neneX+15 < t.x+60 && (neneY+15 < t.y || neneY+neneSize-15 > t.y+t.h)) chocar();
                 if (!t.p && t.x < neneX) { t.p = true; score++; document.getElementById('puntos').innerText = "Puntos: " + score; }
                 if (t.x < -70) tuberias.splice(i, 1);
             });
 
-            // Naves
             if (score > 3 && frame % 120 === 0 && Math.random() > 0.5) navesEnemigas.push({ x: canvas.width, y: Math.random()*500, w: 60, h: 40 });
             navesEnemigas.forEach((n, i) => {
                 n.x -= (v + 1);
@@ -203,7 +218,6 @@
                 if (n.x < -100) navesEnemigas.splice(i, 1);
             });
 
-            // Láseres
             lasers.forEach((l, li) => {
                 l.x += 10;
                 ctx.fillStyle = "red"; ctx.fillRect(l.x, l.y, l.w, l.h);
@@ -217,7 +231,6 @@
                 if (l.x > canvas.width) lasers.splice(li, 1);
             });
 
-            // Partículas explosión
             fragmentos.forEach((f, i) => {
                 f.x += f.vx; f.y += f.vy; f.v -= 0.02;
                 ctx.fillStyle = `rgba(255,165,0,${f.v})`;
@@ -229,7 +242,6 @@
             frame++;
         }
 
-        // Personaje con efecto de parpadeo si es invulnerable
         if (inicioFase === 2 && (invulnerable % 10 < 5)) {
             let img = (neneActual === "Iván") ? imagenes.ivan : imagenes.pedro;
             if (img) ctx.drawImage(img, neneX, neneY, neneSize, neneSize);
