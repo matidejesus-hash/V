@@ -3,44 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Super Iván, Pedro y Rambo - Mobile Edition</title>
+    <title>Super Iván y Pedro - Space Race Android</title>
     <style>
         body { 
-            margin: 0; 
-            background: #111; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            height: 100vh; 
-            overflow: hidden; 
-            font-family: 'Arial Black', sans-serif;
-            touch-action: none; /* Evita el scroll y zoom accidental */
+            margin: 0; background: #111; display: flex; justify-content: center; align-items: center; 
+            height: 100vh; overflow: hidden; font-family: 'Arial Black', sans-serif; 
+            touch-action: none; /* Evita zoom y scroll accidental */
         }
         canvas { 
-            border: 2px solid #fff; 
-            background: #4ec0ca; 
-            max-width: 100vw; 
-            max-height: 100vh;
-            object-fit: contain;
+            border: 2px solid #fff; background: #4ec0ca; 
+            max-width: 100vw; max-height: 100vh; object-fit: contain; 
         }
         
         #ui { position: absolute; text-align: center; color: white; pointer-events: none; width: 100%; max-width: 400px; height: 100%; max-height: 600px; }
         
         #pantallaInicio { 
-            position: absolute; 
-            width: 100%; max-width: 400px; 
-            height: 100%; max-height: 600px; 
-            background: #000; 
-            z-index: 100; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            cursor: pointer;
-            border: 4px solid #fff;
+            position: absolute; width: 100%; max-width: 400px; height: 100%; max-height: 600px; 
+            background: #000; z-index: 100; display: flex; justify-content: center; align-items: center; 
+            cursor: pointer; border: 4px solid #fff;
         }
         #pantallaInicio img { width: 100%; height: 100%; object-fit: contain; }
 
-        .menu-container { position: absolute; background: rgba(0,0,0,0.95); width: 100%; max-width: 400px; height: 100%; max-height: 600px; display: none; flex-direction: column; justify-content: center; align-items: center; color: white; z-index: 10; border: 4px solid #fff; }
+        #menu { position: absolute; background: rgba(0,0,0,0.95); width: 100%; max-width: 400px; height: 100%; max-height: 600px; display: none; flex-direction: column; justify-content: center; align-items: center; color: white; z-index: 10; border: 4px solid #fff; }
         
         #cartelUpss { position: absolute; width: 100%; max-width: 400px; height: 100%; max-height: 600px; display: none; flex-direction: column; justify-content: center; align-items: center; color: #ffeb3b; z-index: 20; text-align: center; pointer-events: none; }
         .upss-texto { font-size: 50px; text-shadow: 5px 5px #f00; }
@@ -56,18 +40,11 @@
 <body>
 
     <div id="pantallaInicio" onclick="quitarInicio()">
-        <img src="inicio.jpg" alt="Super Iván, Pedro y Rambo">
+        <img src="inicio.jpg" alt="Super Iván y Pedro Space Race">
     </div>
 
-    <div id="menuPersonaje" class="menu-container">
-        <h1>¿QUIÉN VUELA?</h1>
-        <button class="btn" onclick="elegirPersonaje('Iván')">SUPER IVÁN</button>
-        <button class="btn" onclick="elegirPersonaje('Pedro')">SUPER PEDRO</button>
-        <button class="btn" onclick="elegirPersonaje('Rambo')">SUPER RAMBO</button>
-    </div>
-
-    <div id="menuDificultad" class="menu-container">
-        <h1 id="tituloDificultad">NIVEL</h1>
+    <div id="menu" class="menu-container">
+        <h1 id="tituloMenu">¡A VOLAR!</h1>
         <button class="btn" onclick="iniciar(1)" style="color:#4caf50">NOOB</button>
         <button class="btn" onclick="iniciar(2)" style="color:#2196f3">PRO</button>
         <button class="btn" onclick="iniciar(3)" style="color:#9c27b0">HACKER</button>
@@ -93,31 +70,33 @@
 <script>
     const canvas = document.getElementById('juego');
     const ctx = canvas.getContext('2d');
-    const menuPersonaje = document.getElementById('menuPersonaje');
-    const menuDificultad = document.getElementById('menuDificultad');
+    const menu = document.getElementById('menu');
     const pantallaInicio = document.getElementById('pantallaInicio');
     const cartelUpss = document.getElementById('cartelUpss');
     const jugadorTxt = document.getElementById('jugador');
     const puntosTxt = document.getElementById('puntos');
+    const tituloMenu = document.getElementById('tituloMenu');
 
     canvas.width = 400; canvas.height = 600;
-
-    // --- AUDIOS ---
-    const musicaInicio = new Audio('musica inicio.mp3'); 
-    musicaInicio.loop = true;
-    const musicaFondo = new Audio('musica.mp3'); 
-    musicaFondo.loop = true;
-    const sonidoMuerte = new Audio('muerte.mp3'); 
-    const sonidoLadrido = new Audio('ladrido.mp3');
 
     // --- IMÁGENES ---
     const imgIvan = new Image(); imgIvan.src = 'ivan.png';
     const imgPedro = new Image(); imgPedro.src = 'pedro.png';
     const imgRambo = new Image(); imgRambo.src = 'rambo.png';
-    const imgHuesito = new Image(); imgHuesito.src = 'huesito.png';
     const imgFondo = new Image(); imgFondo.src = 'fondo.jpg';
     const imgTextura = new Image(); imgTextura.src = 'textura.png';
     const imgNave = new Image(); imgNave.src = 'nave.png'; 
+    
+    // Nuevos proyectiles
+    const imgKetchup = new Image(); imgKetchup.src = 'ketchup.png';
+    const imgRayoIvan = new Image(); imgRayoIvan.src = 'rayo Ivan.jpg';
+    const imgHuesito = new Image(); imgHuesito.src = 'huesito.png';
+
+    // --- AUDIOS ---
+    const musicaInicio = new Audio('musica inicio.mp3'); 
+    const musicaFondo = new Audio('musica.mp3'); 
+    const sonidoMuerte = new Audio('muerte.mp3'); 
+    musicaInicio.loop = true; musicaFondo.loop = true;
 
     let neneX = 50, neneY = 300, neneSize = 70;
     let velY = 0, gravedad = 0.35, salto = -7.2;
@@ -135,7 +114,6 @@
         const steps = 20;
         const stepTime = duration / steps;
         let currentStep = 0;
-
         const interval = setInterval(() => {
             currentStep++;
             audio.volume = Math.max(0, Math.min(1, startVolume + (diff * (currentStep / steps))));
@@ -151,31 +129,22 @@
         if (!inicioQuitado) {
             inicioQuitado = true;
             if (audioCtx.state === 'suspended') audioCtx.resume();
-            musicaInicio.volume = 0;
-            musicaInicio.play();
+            musicaInicio.volume = 0; musicaInicio.play();
             fadeAudio(musicaInicio, 1, 1000);
             pantallaInicio.style.display = 'none';
-            menuPersonaje.style.display = 'flex';
+            menu.style.display = 'flex';
         }
     }
 
-    function elegirPersonaje(nombre) {
-        neneActual = nombre;
-        menuPersonaje.style.display = 'none';
-        menuDificultad.style.display = 'flex';
-        document.getElementById('tituloDificultad').innerText = "NIVEL PARA " + nombre.toUpperCase();
-    }
-
     function iniciar(nivel) {
-        fadeAudio(musicaInicio, 0, 800, () => { musicaInicio.currentTime = 0; });
+        fadeAudio(musicaInicio, 0, 800, () => musicaInicio.currentTime = 0);
         setTimeout(() => {
-            musicaFondo.volume = 0;
-            musicaFondo.play();
+            musicaFondo.volume = 0; musicaFondo.play();
             fadeAudio(musicaFondo, 1, 800);
         }, 200);
 
         dificultad = nivel;
-        menuDificultad.style.display = 'none';
+        menu.style.display = 'none';
         cartelUpss.style.display = 'none';
         vidas = 3; invulnerable = 0;
         actualizarVidasUI();
@@ -188,15 +157,40 @@
         setTimeout(() => { if(activo) jugadorTxt.style.opacity = '0'; }, 2000);
     }
 
-    function beep(f, t, type="sine", vol=0.05) {
-        if(audioCtx.state === 'suspended') return;
-        const o = audioCtx.createOscillator();
-        const g = audioCtx.createGain();
-        o.type = type; o.connect(g); g.connect(audioCtx.destination);
-        o.frequency.value = f; g.gain.value = vol;
-        o.start(); g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + t);
-        o.stop(audioCtx.currentTime + t);
+    function saltar() { if (activo) { velY = salto; } }
+    
+    function disparar() {
+        if (!activo) return;
+        let imgLaser = imgHuesito; // Default Rambo
+        let laserW = 30, laserH = 30;
+
+        if (neneActual === "Iván") {
+            imgLaser = imgRayoIvan;
+            laserW = 60; laserH = 20;
+        } else if (neneActual === "Pedro") {
+            imgLaser = imgKetchup;
+            laserW = 45; laserH = 25;
+        }
+
+        lasers.push({ 
+            x: neneX + neneSize, 
+            y: neneY + neneSize/2 - laserH/2, 
+            w: laserW, 
+            h: laserH, 
+            img: imgLaser 
+        });
     }
+
+    // --- CONTROLES ANDROID ---
+    window.addEventListener('touchstart', (e) => {
+        if (!inicioQuitado) { quitarInicio(); return; }
+        if (!activo) return;
+        
+        const touchX = e.touches[0].clientX;
+        if (touchX < window.innerWidth / 2) saltar(); 
+        else disparar();
+        e.preventDefault();
+    }, { passive: false });
 
     function actualizarVidasUI() {
         for(let i=1; i<=3; i++) {
@@ -204,59 +198,28 @@
         }
     }
 
-    function saltar() { if (activo) { velY = salto; beep(450, 0.1); } }
-    
-    function disparar() {
-        if (!activo) return;
-        if (neneActual === "Rambo") {
-            sonidoLadrido.currentTime = 0;
-            sonidoLadrido.play().catch(() => {});
-        } else {
-            beep(1200, 0.1, "square", 0.03); 
-        }
-        lasers.push({ x: neneX + neneSize, y: neneY + neneSize/2, w: 35, h: 35, rot: 0 });
-    }
-
-    // --- CONTROLES ADAPTADOS A MÓVIL ---
-    window.addEventListener('touchstart', (e) => {
-        if (!inicioQuitado) { quitarInicio(); return; }
-        if (!activo) return;
-        
-        // Detectar si toca el lado izquierdo o derecho de la pantalla
-        const touchX = e.touches[0].clientX;
-        const screenWidth = window.innerWidth;
-
-        if (touchX < screenWidth / 2) {
-            saltar(); // Izquierda: Salta
-        } else {
-            disparar(); // Derecha: Dispara
-        }
-        e.preventDefault(); // Evita el zoom/scroll
-    }, { passive: false });
-
-    // Mantener compatibilidad con teclado
-    window.onkeydown = (e) => { 
-        if (!inicioQuitado) { quitarInicio(); return; }
-        if(e.code === 'Space') saltar(); 
-        if(e.code === 'KeyW') disparar(); 
-    };
-
     function chocar() {
         if (invulnerable > 0) return;
         vidas--;
         actualizarVidasUI();
-        beep(150, 0.5, "sawtooth", 0.1);
-        if (vidas <= 0) { morirDefinitivo(); } else { invulnerable = 120; velY = salto; }
+        if (vidas <= 0) morirDefinitivo(); 
+        else { invulnerable = 120; velY = salto; }
     }
 
     function morirDefinitivo() {
         activo = false;
-        fadeAudio(musicaFondo, 0, 500, () => { musicaFondo.currentTime = 0; });
+        fadeAudio(musicaFondo, 0, 500, () => musicaFondo.currentTime = 0);
         cartelUpss.style.display = 'flex';
         sonidoMuerte.play().catch(() => {});
         sonidoMuerte.onended = () => {
             cartelUpss.style.display = 'none';
-            menuPersonaje.style.display = 'flex';
+            // Ciclo de personajes
+            if (neneActual === "Iván") neneActual = "Pedro";
+            else if (neneActual === "Pedro") neneActual = "Rambo";
+            else neneActual = "Iván";
+            
+            tituloMenu.innerHTML = "TURNO DE: <br><span style='color:#4ec0ca'>" + neneActual.toUpperCase() + "</span>";
+            menu.style.display = 'flex';
             musicaInicio.volume = 0; musicaInicio.play();
             fadeAudio(musicaInicio, 1, 800);
         };
@@ -284,15 +247,11 @@
             }
 
             lasers.forEach((l, li) => {
-                l.x += 10; l.rot += 0.2;
-                ctx.save();
-                ctx.translate(l.x + l.w/2, l.y);
-                ctx.rotate(l.rot);
-                if (imgHuesito.complete) ctx.drawImage(imgHuesito, -l.w/2, -l.h/2, l.w, l.h);
-                ctx.restore();
-
+                l.x += 10;
+                if (l.img.complete) ctx.drawImage(l.img, l.x, l.y, l.w, l.h);
+                
                 navesEnemigas.forEach((n, ni) => {
-                    if (l.x < n.x + n.w && l.x + l.w > n.x && l.y > n.y && l.y < n.y + n.h) {
+                    if (l.x < n.x + n.w && l.x + l.w > n.x && l.y + l.h > n.y && l.y < n.y + n.h) {
                         for(let i=0; i<15; i++) fragmentos.push({ x: n.x + n.w/2, y: n.y + n.h/2, vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, size: Math.random()*5+2, vida: 1, color: 'orange' });
                         textosBoom.push({ x: n.x + n.w/2, y: n.y + n.h/2, vida: 1 });
                         navesEnemigas.splice(ni, 1); lasers.splice(li, 1);
@@ -337,7 +296,7 @@
         }
 
         if (inicioQuitado && invulnerable % 10 < 5) {
-            let img = (neneActual === "Pedro") ? imgPedro : (neneActual === "Rambo" ? imgRambo : imgIvan);
+            let img = (neneActual === "Iván") ? imgIvan : (neneActual === "Pedro" ? imgPedro : imgRambo);
             ctx.save(); ctx.translate(neneX + neneSize/2, neneY + neneSize/2);
             ctx.rotate(activo ? Math.min(Math.PI/4, Math.max(-Math.PI/4, velY * 0.05)) : 0);
             if (img.complete) ctx.drawImage(img, -neneSize/2, -neneSize/2, neneSize, neneSize);
