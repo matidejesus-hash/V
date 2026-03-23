@@ -3,17 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Super Iván y Pedro - Space Race Android</title>
+    <title>Super Iván, Pedro y Rambo - Récord Edition</title>
     <style>
         body { 
             margin: 0; background: #111; display: flex; justify-content: center; align-items: center; 
-            height: 100vh; overflow: hidden; font-family: 'Arial Black', sans-serif; 
-            touch-action: none; /* Evita zoom y scroll accidental */
+            height: 100vh; overflow: hidden; font-family: 'Arial Black', sans-serif; touch-action: none; 
         }
-        canvas { 
-            border: 2px solid #fff; background: #4ec0ca; 
-            max-width: 100vw; max-height: 100vh; object-fit: contain; 
-        }
+        canvas { border: 2px solid #fff; background: #4ec0ca; max-width: 100vw; max-height: 100vh; object-fit: contain; }
         
         #ui { position: absolute; text-align: center; color: white; pointer-events: none; width: 100%; max-width: 400px; height: 100%; max-height: 600px; }
         
@@ -24,7 +20,7 @@
         }
         #pantallaInicio img { width: 100%; height: 100%; object-fit: contain; }
 
-        #menu { position: absolute; background: rgba(0,0,0,0.95); width: 100%; max-width: 400px; height: 100%; max-height: 600px; display: none; flex-direction: column; justify-content: center; align-items: center; color: white; z-index: 10; border: 4px solid #fff; }
+        .menu-container { position: absolute; background: rgba(0,0,0,0.95); width: 100%; max-width: 400px; height: 100%; max-height: 600px; display: none; flex-direction: column; justify-content: center; align-items: center; color: white; z-index: 10; border: 4px solid #fff; }
         
         #cartelUpss { position: absolute; width: 100%; max-width: 400px; height: 100%; max-height: 600px; display: none; flex-direction: column; justify-content: center; align-items: center; color: #ffeb3b; z-index: 20; text-align: center; pointer-events: none; }
         .upss-texto { font-size: 50px; text-shadow: 5px 5px #f00; }
@@ -33,18 +29,34 @@
         #vidas-container { position: absolute; top: 15px; left: 15px; display: flex; gap: 5px; pointer-events: none; z-index: 5; }
         .corazon { font-size: 24px; text-shadow: 2px 2px #000; }
         
-        #jugador { font-size: 25px; text-shadow: 3px 3px #000; margin-top: 20px; opacity: 0; transition: 0.5s; }
-        #puntos { font-size: 25px; text-shadow: 2px 2px #000; margin: 0; }
+        #marcador { position: absolute; top: 15px; right: 15px; text-align: right; pointer-events: none; }
+        #puntos { font-size: 22px; text-shadow: 2px 2px #000; margin: 0; }
+        #record-ui { font-size: 14px; color: #ffeb3b; text-shadow: 1px 1px #000; margin: 0; }
+
+        #mensajeRecord {
+            position: absolute; width: 100%; top: 40%; text-align: center;
+            color: #ffeb3b; font-size: 35px; text-shadow: 4px 4px #f00;
+            display: none; z-index: 30; pointer-events: none;
+            animation: latido 0.5s infinite alternate;
+        }
+        @keyframes latido { from { transform: scale(1); } to { transform: scale(1.1); } }
     </style>
 </head>
 <body>
 
     <div id="pantallaInicio" onclick="quitarInicio()">
-        <img src="inicio.jpg" alt="Super Iván y Pedro Space Race">
+        <img src="inicio.jpg" alt="Super Iván, Pedro y Rambo">
     </div>
 
-    <div id="menu" class="menu-container">
-        <h1 id="tituloMenu">¡A VOLAR!</h1>
+    <div id="menuPersonaje" class="menu-container">
+        <h1>¿QUIÉN VUELA?</h1>
+        <button class="btn" onclick="elegirPersonaje('Iván')">SUPER IVÁN</button>
+        <button class="btn" onclick="elegirPersonaje('Pedro')">SUPER PEDRO</button>
+        <button class="btn" onclick="elegirPersonaje('Rambo')">SUPER RAMBO</button>
+    </div>
+
+    <div id="menuDificultad" class="menu-container">
+        <h1 id="tituloDificultad">NIVEL</h1>
         <button class="btn" onclick="iniciar(1)" style="color:#4caf50">NOOB</button>
         <button class="btn" onclick="iniciar(2)" style="color:#2196f3">PRO</button>
         <button class="btn" onclick="iniciar(3)" style="color:#9c27b0">HACKER</button>
@@ -56,9 +68,13 @@
         <div style="font-size: 20px; color: white;">intentá de vuelta...</div>
     </div>
 
+    <div id="mensajeRecord">¡RÉCORD SUPERADO!</div>
+
     <div id="ui">
-        <h1 id="jugador">¡A VOLAR!</h1>
-        <h2 id="puntos">Puntos: 0</h2>
+        <div id="marcador">
+            <p id="puntos">Puntos: 0</p>
+            <p id="record-ui">Record: 0</p>
+        </div>
         <div id="vidas-container">
             <span id="v1" class="corazon">❤️</span>
             <span id="v2" class="corazon">❤️</span>
@@ -70,12 +86,12 @@
 <script>
     const canvas = document.getElementById('juego');
     const ctx = canvas.getContext('2d');
-    const menu = document.getElementById('menu');
+    const menuP = document.getElementById('menuPersonaje');
+    const menuD = document.getElementById('menuDificultad');
     const pantallaInicio = document.getElementById('pantallaInicio');
-    const cartelUpss = document.getElementById('cartelUpss');
-    const jugadorTxt = document.getElementById('jugador');
+    const msjRecord = document.getElementById('mensajeRecord');
     const puntosTxt = document.getElementById('puntos');
-    const tituloMenu = document.getElementById('tituloMenu');
+    const recordTxt = document.getElementById('record-ui');
 
     canvas.width = 400; canvas.height = 600;
 
@@ -86,8 +102,6 @@
     const imgFondo = new Image(); imgFondo.src = 'fondo.jpg';
     const imgTextura = new Image(); imgTextura.src = 'textura.png';
     const imgNave = new Image(); imgNave.src = 'nave.png'; 
-    
-    // Nuevos proyectiles
     const imgKetchup = new Image(); imgKetchup.src = 'ketchup.png';
     const imgRayoIvan = new Image(); imgRayoIvan.src = 'rayo Ivan.jpg';
     const imgHuesito = new Image(); imgHuesito.src = 'huesito.png';
@@ -101,128 +115,79 @@
     let neneX = 50, neneY = 300, neneSize = 70;
     let velY = 0, gravedad = 0.35, salto = -7.2;
     let score = 0, activo = false, frame = 0, inicioQuitado = false;
-    let vidas = 3, invulnerable = 0;
-    let tuberias = [], navesEnemigas = [], lasers = [], fragmentos = [], textosBoom = [];
+    let vidas = 3, invulnerable = 0, record = localStorage.getItem('highScore') || 0;
+    let recordBatido = false;
+    let tuberias = [], navesEnemigas = [], lasers = [], fragmentos = [], fireworks = [];
     let neneActual = "Iván";
     let patronTextura = null, dificultad = 1;
 
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-    function fadeAudio(audio, targetVolume, duration, callback) {
-        const startVolume = audio.volume;
-        const diff = targetVolume - startVolume;
-        const steps = 20;
-        const stepTime = duration / steps;
-        let currentStep = 0;
-        const interval = setInterval(() => {
-            currentStep++;
-            audio.volume = Math.max(0, Math.min(1, startVolume + (diff * (currentStep / steps))));
-            if (currentStep >= steps) {
-                clearInterval(interval);
-                if (targetVolume === 0) audio.pause();
-                if (callback) callback();
-            }
-        }, stepTime);
-    }
+    recordTxt.innerText = "Record: " + record;
 
     function quitarInicio() {
         if (!inicioQuitado) {
             inicioQuitado = true;
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            musicaInicio.volume = 0; musicaInicio.play();
-            fadeAudio(musicaInicio, 1, 1000);
+            musicaInicio.play();
             pantallaInicio.style.display = 'none';
-            menu.style.display = 'flex';
+            menuP.style.display = 'flex';
         }
+    }
+
+    function elegirPersonaje(p) {
+        neneActual = p;
+        menuP.style.display = 'none';
+        menuD.style.display = 'flex';
+        document.getElementById('tituloDificultad').innerText = "NIVEL " + p.toUpperCase();
     }
 
     function iniciar(nivel) {
-        fadeAudio(musicaInicio, 0, 800, () => musicaInicio.currentTime = 0);
-        setTimeout(() => {
-            musicaFondo.volume = 0; musicaFondo.play();
-            fadeAudio(musicaFondo, 1, 800);
-        }, 200);
-
+        musicaInicio.pause();
+        musicaFondo.currentTime = 0;
+        musicaFondo.play();
         dificultad = nivel;
-        menu.style.display = 'none';
-        cartelUpss.style.display = 'none';
-        vidas = 3; invulnerable = 0;
+        menuD.style.display = 'none';
+        msjRecord.style.display = 'none';
+        vidas = 3; invulnerable = 0; recordBatido = false;
         actualizarVidasUI();
         score = 0; frame = 0; neneY = 300; velY = 0;
-        tuberias = []; navesEnemigas = []; lasers = []; fragmentos = []; textosBoom = [];
+        tuberias = []; navesEnemigas = []; lasers = []; fragmentos = []; fireworks = [];
         puntosTxt.innerText = "Puntos: 0";
-        jugadorTxt.innerText = "JUEGA: " + neneActual.toUpperCase();
-        jugadorTxt.style.opacity = '1';
         activo = true;
-        setTimeout(() => { if(activo) jugadorTxt.style.opacity = '0'; }, 2000);
     }
 
-    function saltar() { if (activo) { velY = salto; } }
-    
     function disparar() {
         if (!activo) return;
-        let imgLaser = imgHuesito; // Default Rambo
-        let laserW = 30, laserH = 30;
-
-        if (neneActual === "Iván") {
-            imgLaser = imgRayoIvan;
-            laserW = 60; laserH = 20;
-        } else if (neneActual === "Pedro") {
-            imgLaser = imgKetchup;
-            laserW = 45; laserH = 25;
-        }
-
-        lasers.push({ 
-            x: neneX + neneSize, 
-            y: neneY + neneSize/2 - laserH/2, 
-            w: laserW, 
-            h: laserH, 
-            img: imgLaser 
-        });
+        let imgP = imgHuesito; let wP = 30, hP = 30;
+        if (neneActual === "Iván") { imgP = imgRayoIvan; wP = 60; hP = 20; }
+        else if (neneActual === "Pedro") { imgP = imgKetchup; wP = 45; hP = 25; }
+        lasers.push({ x: neneX + neneSize, y: neneY + neneSize/2 - hP/2, w: wP, h: hP, img: imgP });
     }
 
-    // --- CONTROLES ANDROID ---
     window.addEventListener('touchstart', (e) => {
         if (!inicioQuitado) { quitarInicio(); return; }
         if (!activo) return;
-        
-        const touchX = e.touches[0].clientX;
-        if (touchX < window.innerWidth / 2) saltar(); 
+        if (e.touches[0].clientX < window.innerWidth / 2) velY = salto; 
         else disparar();
         e.preventDefault();
     }, { passive: false });
 
     function actualizarVidasUI() {
-        for(let i=1; i<=3; i++) {
-            document.getElementById('v' + i).innerText = (i <= vidas) ? "❤️" : "🖤";
+        for(let i=1; i<=3; i++) document.getElementById('v' + i).innerText = (i <= vidas) ? "❤️" : "🖤";
+    }
+
+    function createFirework() {
+        const x = Math.random() * canvas.width;
+        const y = Math.random() * (canvas.height / 2);
+        const colors = ['#ff0', '#f0f', '#0ff', '#f00', '#0f0'];
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        for (let i = 0; i < 30; i++) {
+            fireworks.push({
+                x, y,
+                vx: (Math.random() - 0.5) * 8,
+                vy: (Math.random() - 0.5) * 8,
+                life: 1.0,
+                color
+            });
         }
-    }
-
-    function chocar() {
-        if (invulnerable > 0) return;
-        vidas--;
-        actualizarVidasUI();
-        if (vidas <= 0) morirDefinitivo(); 
-        else { invulnerable = 120; velY = salto; }
-    }
-
-    function morirDefinitivo() {
-        activo = false;
-        fadeAudio(musicaFondo, 0, 500, () => musicaFondo.currentTime = 0);
-        cartelUpss.style.display = 'flex';
-        sonidoMuerte.play().catch(() => {});
-        sonidoMuerte.onended = () => {
-            cartelUpss.style.display = 'none';
-            // Ciclo de personajes
-            if (neneActual === "Iván") neneActual = "Pedro";
-            else if (neneActual === "Pedro") neneActual = "Rambo";
-            else neneActual = "Iván";
-            
-            tituloMenu.innerHTML = "TURNO DE: <br><span style='color:#4ec0ca'>" + neneActual.toUpperCase() + "</span>";
-            menu.style.display = 'flex';
-            musicaInicio.volume = 0; musicaInicio.play();
-            fadeAudio(musicaInicio, 1, 800);
-        };
     }
 
     function loop() {
@@ -235,74 +200,68 @@
             velY += gravedad; neneY += velY;
             if (invulnerable > 0) invulnerable--;
             let velJuego = 1.8 + (dificultad * 0.6); 
-            
+
             if (frame % Math.floor(160 - (dificultad * 15)) === 0) {
                 let h = 300 - (dificultad * 35);
-                let yRnd = Math.random() * (canvas.height - h - 100) + 50;
-                tuberias.push({ x: canvas.width, y: yRnd, h: h, p: false });
+                tuberias.push({ x: canvas.width, y: Math.random() * (canvas.height - h - 100) + 50, h: h, p: false });
             }
 
-            if (score >= 5 && frame % 110 === 0 && Math.random() > (0.6 - dificultad*0.1)) {
-                navesEnemigas.push({ x: canvas.width, y: Math.random()*500 + 50, w: 75, h: 45, velX: velJuego + dificultad });
+            if (score >= 5 && frame % 110 === 0 && Math.random() > 0.4) {
+                navesEnemigas.push({ x: canvas.width, y: Math.random()*500+50, w: 75, h: 45, velX: velJuego + dificultad });
             }
 
             lasers.forEach((l, li) => {
                 l.x += 10;
                 if (l.img.complete) ctx.drawImage(l.img, l.x, l.y, l.w, l.h);
-                
                 navesEnemigas.forEach((n, ni) => {
                     if (l.x < n.x + n.w && l.x + l.w > n.x && l.y + l.h > n.y && l.y < n.y + n.h) {
-                        for(let i=0; i<15; i++) fragmentos.push({ x: n.x + n.w/2, y: n.y + n.h/2, vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, size: Math.random()*5+2, vida: 1, color: 'orange' });
-                        textosBoom.push({ x: n.x + n.w/2, y: n.y + n.h/2, vida: 1 });
                         navesEnemigas.splice(ni, 1); lasers.splice(li, 1);
-                        score += 2; puntosTxt.innerText = "Puntos: " + score;
+                        score += 2; checkRecord();
                     }
                 });
-                if (l.x > canvas.width) lasers.splice(li, 1);
             });
 
             tuberias.forEach((t, ti) => {
                 t.x -= velJuego;
-                if (patronTextura) {
-                    let matriz = new DOMMatrix().translate(t.x, 0); patronTextura.setTransform(matriz);
-                    ctx.fillStyle = patronTextura;
-                } else { ctx.fillStyle = "#73bf2e"; }
+                ctx.fillStyle = patronTextura || "#73bf2e";
                 ctx.fillRect(t.x, 0, 65, t.y); ctx.fillRect(t.x, t.y + t.h, 65, canvas.height);
-                if (neneX+neneSize-20 > t.x && neneX+20 < t.x+65 && (neneY+20 < t.y || neneY+neneSize-20 > t.y+t.h)) chocar();
-                if (!t.p && t.x < neneX) { t.p = true; score++; puntosTxt.innerText = "Puntos: " + score; }
-                if (t.x < -70) tuberias.splice(ti, 1);
+                if (neneX+50 > t.x && neneX+20 < t.x+65 && (neneY+20 < t.y || neneY+50 > t.y+t.h)) {
+                    if(invulnerable<=0){ vidas--; invulnerable=120; if(vidas<=0) { activo=false; sonidoMuerte.play(); menuP.style.display='flex'; } else actualizarVidasUI(); }
+                }
+                if (!t.p && t.x < neneX) { t.p = true; score++; checkRecord(); }
             });
 
-            navesEnemigas.forEach((n, ni) => {
-                n.x -= n.velX; if (imgNave.complete) ctx.drawImage(imgNave, n.x, n.y, n.w, n.h);
-                if (neneX+neneSize-25 > n.x && neneX+25 < n.x+n.w && neneY+25 < n.y+n.h && neneY+neneSize-25 > n.y) chocar();
-                if (n.x < -120) navesEnemigas.splice(ni, 1);
-            });
-
-            fragmentos.forEach((f, fi) => {
-                f.x += f.vx; f.y += f.vy; f.vida -= 0.03;
-                if (f.vida <= 0) fragmentos.splice(fi, 1);
-                else { ctx.fillStyle = f.color; ctx.globalAlpha = f.vida; ctx.fillRect(f.x, f.y, f.size, f.size); ctx.globalAlpha = 1; }
-            });
-
-            textosBoom.forEach((t, ti) => {
-                t.y -= 1; t.vida -= 0.02;
-                if (t.vida <= 0) textosBoom.splice(ti, 1);
-                else { ctx.fillStyle = `rgba(255, 165, 0, ${t.vida})`; ctx.font = 'bold 30px Arial Black'; ctx.textAlign = 'center'; ctx.fillText('¡BOOM!', t.x, t.y); }
-            });
-
-            if (neneY > canvas.height || neneY < 0) chocar();
+            if (neneY > canvas.height || neneY < 0) { activo=false; sonidoMuerte.play(); menuP.style.display='flex'; }
             frame++;
         }
 
+        fireworks.forEach((f, fi) => {
+            f.x += f.vx; f.y += f.vy; f.life -= 0.015;
+            if (f.life <= 0) fireworks.splice(fi, 1);
+            else { ctx.globalAlpha = f.life; ctx.fillStyle = f.color; ctx.beginPath(); ctx.arc(f.x, f.y, 3, 0, Math.PI*2); ctx.fill(); ctx.globalAlpha = 1; }
+        });
+
         if (inicioQuitado && invulnerable % 10 < 5) {
             let img = (neneActual === "Iván") ? imgIvan : (neneActual === "Pedro" ? imgPedro : imgRambo);
-            ctx.save(); ctx.translate(neneX + neneSize/2, neneY + neneSize/2);
-            ctx.rotate(activo ? Math.min(Math.PI/4, Math.max(-Math.PI/4, velY * 0.05)) : 0);
-            if (img.complete) ctx.drawImage(img, -neneSize/2, -neneSize/2, neneSize, neneSize);
-            ctx.restore();
+            ctx.drawImage(img, neneX, neneY, neneSize, neneSize);
         }
         requestAnimationFrame(loop);
+    }
+
+    function checkRecord() {
+        puntosTxt.innerText = "Puntos: " + score;
+        if (score > record) {
+            record = score;
+            localStorage.setItem('highScore', record);
+            recordTxt.innerText = "Record: " + record;
+            if (!recordBatido) {
+                recordBatido = true;
+                msjRecord.style.display = 'block';
+                createFirework(); createFirework();
+                setTimeout(() => msjRecord.style.display = 'none', 3000);
+            }
+            if (score % 5 === 0) createFirework();
+        }
     }
     loop();
 </script>
